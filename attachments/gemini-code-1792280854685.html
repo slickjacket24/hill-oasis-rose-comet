@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SYSTEM BREACH — THE ASH QUEEN'S FORGE | Slick Jacket</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #050508;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 1280px;
+            height: 100%;
+            max-height: 720px;
+            box-shadow: 0 0 40px rgba(0, 255, 204, 0.15);
+            background: #090a10;
+            border: 2px solid #1a1c29;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .hud-element {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .bar-container {
+            width: 200px;
+            height: 16px;
+            background: rgba(26, 28, 41, 0.8);
+            border: 1px solid #00ffcc;
+            position: relative;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            background: #00ffcc;
+            transition: width 0.1s linear;
+        }
+        .boss-bar-container {
+            width: 400px;
+            height: 20px;
+            background: rgba(26, 28, 41, 0.8);
+            border: 1px solid #ff3366;
+            position: relative;
+            overflow: hidden;
+        }
+        .boss-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: #ff3366;
+            transition: width 0.1s linear;
+        }
+        .brand {
+            font-size: 10px;
+            letter-spacing: 3px;
+            color: #ff9900;
+            text-transform: uppercase;
+        }
+        #mobile-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            display: none;
+            justify-content: space-between;
+            padding: 20px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .control-group {
+            display: flex;
+            gap: 15px;
+        }
+        .touch-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(0, 255, 204, 0.1);
+            border: 2px solid #00ffcc;
+            color: #00ffcc;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            backdrop-filter: blur(4px);
+        }
+        .touch-btn:active {
+            background: rgba(0, 255, 204, 0.4);
+        }
+        @media (pointer: coarse) {
+            #mobile-controls { display: flex; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+    <div id="ui-overlay">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+            <div class="hud-element" id="player-hud" style="display:none;">
+                <div>
+                    <div style="font-size: 11px; margin-bottom: 2px;">SYS.INTEGRITY</div>
+                    <div class="bar-container"><div id="hp-fill" class="bar-fill"></div></div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; margin-bottom: 2px;">CORE.HEAT</div>
+                    <div class="bar-container"><div id="heat-fill" class="bar-fill" style="background:#ff9900;"></div></div>
+                </div>
+            </div>
+            <div class="brand">SLICK JACKET — WEIRD BY DESIGN</div>
+        </div>
+        <div style="display: flex; justify-content: center; width: 100%;">
+            <div class="hud-element" id="boss-hud" style="display:none; flex-direction: column; align-items: center;">
+                <div style="font-size: 12px; color: #ff3366; letter-spacing: 2px; margin-bottom: 4px;" id="boss-name">THE ASH QUEEN // CORE FORGE</div>
+                <div class="boss-bar-container"><div id="boss-hp-fill" class="boss-bar-fill"></div></div>
+            </div>
+        </div>
+    </div>
+    <div id="mobile-controls">
+        <div class="control-group">
+            <div class="touch-btn" id="btn-left">◄</div>
+            <div class="touch-btn" id="btn-right">►</div>
+        </div>
+        <div class="control-group">
+            <div class="touch-btn" id="btn-dash">DASH</div>
+            <div class="touch-btn" id="btn-jump">JUMP</div>
+            <div class="touch-btn" id="btn-atk" style="border-color:#ff3366; color:#ff3366;">ATK</div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * SYSTEM BREACH: THE ASH QUEEN'S FORGE
+ * Engine & Game Architecture (Canvas / Web Audio API)
+ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Audio Synthesizer Engine
+class SoundEngine {
+    constructor() {
+        this.ctx = null;
+    }
+    init() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+    playTone(freq, type, duration, vol = 0.1) {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+    }
+    jump() { this.playTone(320, 'square', 0.15, 0.05); }
+    dash() { this.playTone(600, 'sawtooth', 0.1, 0.05); setTimeout(()=>this.playTone(800, 'sawtooth', 0.1, 0.05), 50); }
+    slash() { this.playTone(180, 'triangle', 0.12, 0.1); }
+    hit() { this.playTone(100, 'sawtooth', 0.2, 0.15); }
+    bossRoar() { 
+        this.playTone(70, 'sawtooth', 0.8, 0.2); 
+        setTimeout(()=>this.playTone(50, 'square', 0.6, 0.2), 200);
+    }
+    explosion() {
+        this.playTone(90, 'sawtooth', 0.4, 0.2);
+        setTimeout(()=>this.playTone(40, 'square', 0.5, 0.25), 150);
+    }
+}
+
+const audio = new SoundEngine();
+
+// Input Handler
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.code] = true; audio.init(); });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+const touch = { left: false, right: false, jump: false, dash: false, atk: false };
+function bindTouch(id, prop) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', e => { e.preventDefault(); touch[prop] = true; audio.init(); });
+    el.addEventListener('touchend', e => { e.preventDefault(); touch[prop] = false; });
+    el.addEventListener('mousedown', e => { e.preventDefault(); touch[prop] = true; audio.init(); });
+    el.addEventListener('mouseup', e => { e.preventDefault(); touch[prop] = false; });
+}
+bindTouch('btn-left', 'left');
+bindTouch('btn-right', 'right');
+bindTouch('btn-jump', 'jump');
+bindTouch('btn-dash', 'dash');
+bindTouch('btn-atk', 'atk');
+
+// Particle System
+class ParticleSystem {
+    constructor() {
+        this.particles = [];
+    }
+    emit(x, y, count, color, speed=4, life=30) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = Math.random() * speed;
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd,
+                color,
+                life,
+                maxLife: life,
+                size: Math.random() * 3 + 1
+            });
+        }
+    }
+    update() {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life--;
+            if (p.life <= 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+    }
+    draw() {
+        for (let p of this.particles) {
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life / p.maxLife;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+        }
+        ctx.globalAlpha = 1.0;
+    }
+}
+const particles = new ParticleSystem();
+
+// Game Entities
+class Player {
+    constructor() {
+        this.x = 200;
+        this.y = 500;
+        this.w = 32;
+        this.h = 48;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = 5;
+        this.jumpForce = -12;
+        this.gravity = 0.6;
+        this.grounded = false;
+        this.hp = 100;
+        this.maxHp = 100;
+        this.heat = 0;
+        this.maxHeat = 100;
+        this.facing = 1;
+        this.isAttacking = false;
+        this.attackTimer = 0;
+        this.isDashing = false;
+        this.dashTimer = 0;
+        this.dashCooldown = 0;
+        this.invulnTimer = 0;
+    }
+    update(platforms) {
+        // Dash cooldown
+        if (this.dashCooldown > 0) this.dashCooldown--;
+        if (this.invulnTimer > 0) this.invulnTimer--;
+
+        // Heat decay
+        if (this.heat > 0 && !this.isAttacking) this.heat -= 0.2;
+
+        if (this.isDashing) {
+            this.vx = this.facing * 14;
+            this.vy = 0;
+            this.dashTimer--;
+            particles.emit(this.x + this.w/2, this.y + this.h/2, 2, '#00ffcc', 2, 15);
+            if (this.dashTimer <= 0) this.isDashing = false;
+            return;
+        }
+
+        // Input processing
+        let moveLeft = keys['ArrowLeft'] || keys['KeyA'] || touch.left;
+        let moveRight = keys['ArrowRight'] || keys['KeyD'] || touch.right;
+        let jumpInput = keys['ArrowUp'] || keys['KeyW'] || keys['Space'] || touch.jump;
+        let dashInput = keys['KeyShift'] || touch.dash;
+        let atkInput = keys['KeyX'] || keys['KeyJ'] || touch.atk;
+
+        if (moveLeft) {
+            this.vx = -this.speed;
+            this.facing = -1;
+        } else if (moveRight) {
+            this.vx = this.speed;
+            this.facing = 1;
+        } else {
+            this.vx *= 0.8;
+        }
+
+        // Jump
+        if (jumpInput && this.grounded) {
+            this.vy = this.jumpForce;
+            this.grounded = false;
+            audio.jump();
+            particles.emit(this.x + this.w/2, this.y + this.h, 8, '#00ffcc', 3, 20);
+        }
+
+        // Dash
+        if (dashInput && this.dashCooldown === 0 && !this.isDashing) {
+            this.isDashing = true;
+            this.dashTimer = 12;
+            this.dashCooldown = 45;
+            audio.dash();
+        }
+
+        // Attack
+        if (atkInput && !this.isAttacking) {
+            this.isAttacking = true;
+            this.attackTimer = 15;
+            this.heat = Math.min(this.maxHeat, this.heat + 25);
+            audio.slash();
+            particles.emit(this.x + (this.facing > 0 ? this.w : 0), this.y + this.h/2, 10, '#ff3366', 5, 15);
+        }
+
+        if (this.isAttacking) {
+            this.attackTimer--;
+            if (this.attackTimer <= 0) this.isAttacking = false;
+        }
+
+        // Gravity & Physics
+        this.vy += this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Platform collisions
+        this.grounded = false;
+        for (let p of platforms) {
+            if (this.x + this.w > p.x && this.x < p.x + p.w &&
+                this.y + this.h >= p.y && this.y + this.h - this.vy <= p.y + 10) {
+                this.y = p.y - this.h;
+                this.vy = 0;
+                this.grounded = true;
+            }
+        }
+
+        // Boundary bounds
+        if (this.x < 0) this.x = 0;
+        if (this.x > canvas.width - this.w) this.x = canvas.width - this.w;
+        if (this.y > canvas.height - 100) {
+            this.y = canvas.height - 100;
+            this.vy = 0;
+            this.grounded = true;
+        }
+    }
+    draw() {
+        // Player Body Render
+        ctx.fillStyle = this.invulnTimer % 4 < 2 ? '#00ffcc' : '#ffffff';
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+
+        // Core glow / heat indicator
+        ctx.fillStyle = this.heat > 80 ? '#ff3366' : '#ff9900';
+        ctx.fillRect(this.x + 8, this.y + 12, this.w - 16, 12);
+
+        // Visor glow
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(this.facing > 0 ? this.x + 20 : this.x + 4, this.y + 8, 8, 4);
+
+        // Attack hitbox arc visual
+        if (this.isAttacking) {
+            ctx.strokeStyle = '#ff3366';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            let arcX = this.facing > 0 ? this.x + this.w + 20 : this.x - 20;
+            ctx.arc(arcX, this.y + this.h/2, 30, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+}
+
+class Boss {
+    constructor() {
+        this.x = 900;
+        this.y = 400;
+        this.w = 96;
+        this.h = 128;
+        this.hp = 1000;
+        this.maxHp = 1000;
+        this.state = 'IDLE';
+        this.stateTimer = 120;
+        this.attackPhase = 0;
+        this.facing = -1;
+    }
+    update(player) {
+        this.stateTimer--;
+        if (this.stateTimer <= 0) {
+            this.selectBehavior();
+        }
+    }
+    selectBehavior() {
+        const behaviors = ['CHARGE', 'SLAM', 'FIRE_WAVE'];
+        this.state = behaviors[Math.floor(Math.random() * behaviors.length)];
+        this.stateTimer = 100;
+        if (this.state === 'SLAM') audio.bossRoar();
+    }
+    draw() {
+        // Boss Body - Industrial Mecha Ash Queen
+        ctx.fillStyle = '#1a1c29';
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+
+        // Armor plating
+        ctx.fillStyle = '#2d314d';
+        ctx.fillRect(this.x + 8, this.y + 16, this.w - 16, this.h - 32);
+
+        // Molten Core Engine
+        ctx.fillStyle = (Math.floor(Date.now() / 100) % 2 === 0) ? '#ff3366' : '#ff9900';
+        ctx.fillRect(this.x + 28, this.y + 40, 40, 48);
+
+        // Crown / Spikes
+        ctx.fillStyle = '#ff3366';
+        ctx.beginPath();
+        ctx.moveTo(this.x + 10, this.y);
+        ctx.lineTo(this.x + 30, this.y - 20);
+        ctx.lineTo(this.x + 50, this.y);
+        ctx.lineTo(this.x + 70, this.y - 20);
+        ctx.lineTo(this.x + 86, this.y);
+        ctx.fill();
+    }
+}
+
+// Game State Controller
+class Game {
+    constructor() {
+        this.state = 'TITLE'; // TITLE, PLAYING, GAMEOVER, VICTORY
+        this.player = new Player();
+        this.boss = new Boss();
+        this.platforms = [
+            { x: 100, y: 560, w: 1080, h: 20 }, // Floor
+            { x: 200, y: 440, w: 250, h: 16 },
+            { x: 830, y: 440, w: 250, h: 16 },
+            { x: 500, y: 320, w: 280, h: 16 }
+        ];
+        this.projectiles = [];
+    }
+    start() {
+        this.state = 'PLAYING';
+        this.player = new Player();
+        this.boss = new Boss();
+        this.projectiles = [];
+        document.getElementById('player-hud').style.display = 'flex';
+        document.getElementById('boss-hud').style.display = 'flex';
+    }
+    update() {
+        if (this.state !== 'PLAYING') return;
+
+        this.player.update(this.platforms);
+        this.boss.update(this.player);
+        particles.update();
+
+        // Boss Attack Projectiles Generation
+        if (this.boss.state === 'SLAM' && this.boss.stateTimer === 50) {
+            audio.explosion();
+            particles.emit(this.boss.x, this.boss.y + this.boss.h, 30, '#ff9900', 6, 40);
+            // Spawn shockwave projectiles left and right
+            this.projectiles.push({ x: this.boss.x, y: canvas.height - 120, vx: -6, vy: 0, w: 20, h: 20, color: '#ff3366' });
+            this.projectiles.push({ x: this.boss.x + this.boss.w, y: canvas.height - 120, vx: 6, vy: 0, w: 20, h: 20, color: '#ff3366' });
+        }
+
+        // Update Projectiles
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            let pr = this.projectiles[i];
+            pr.x += pr.vx;
+            pr.y += pr.vy;
+            // Collision with player
+            if (this.player.x < pr.x + pr.w && this.player.x + this.player.w > pr.x &&
+                this.player.y < pr.y + pr.h && this.player.y + this.player.h > pr.y) {
+                if (this.player.invulnTimer === 0) {
+                    this.player.hp -= 15;
+                    this.player.invulnTimer = 45;
+                    audio.hit();
+                    particles.emit(this.player.x, this.player.y, 15, '#ff3366', 4, 20);
+                }
+                this.projectiles.splice(i, 1);
+                continue;
+            }
+            // Out of bounds
+            if (pr.x < 0 || pr.x > canvas.width) {
+                this.projectiles.splice(i, 1);
+            }
+        }
+
+        // Player attack collision with Boss
+        if (this.player.isInstantlyAttacking || this.player.isAttacking) {
+            let hitboxX = this.player.facing > 0 ? this.player.x + this.player.w : this.player.x - 40;
+            let hitboxY = this.player.y;
+            let hitboxW = 40;
+            let hitboxH = this.player.h;
+
+            if (hitboxX < this.boss.x + this.boss.w && hitboxX + hitboxW > this.boss.x &&
+                hitboxY < this.boss.y + this.boss.h && hitboxY + hitboxH > this.boss.y) {
+                if (!this.bossHitRegistered) {
+                    this.boss.hp -= 12;
+                    this.bossHitRegistered = true;
+                    audio.hit();
+                    particles.emit(this.boss.x + this.boss.w/2, this.boss.y + this.boss.h/2, 12, '#00ffcc', 4, 20);
+                }
+            }
+        } else {
+            this.bossHitRegistered = false;
+        }
+
+        // Check Victory / Defeat
+        if (this.boss.hp <= 0) {
+            this.state = 'VICTORY';
+            audio.explosion();
+        }
+        if (this.player.hp <= 0) {
+            this.state = 'GAMEOVER';
+            audio.explosion();
+        }
+
+        // Update HUD DOM Elements
+        document.getElementById('hp-fill').style.width = Math.max(0, (this.player.hp / this.player.maxHp) * 100) + '%';
+        document.getElementById('heat-fill').style.width = (this.player.heat / this.player.maxHeat) * 100 + '%';
+        document.getElementById('boss-hp-fill').style.width = Math.max(0, (this.boss.hp / this.boss.maxHp) * 100) + '%';
+    }
+    draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Background Industrial Parallax Lines / Grid
+        ctx.strokeStyle = '#121522';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, canvas.height);
+            ctx.stroke();
+        }
+        for (let j = 0; j < canvas.height; j += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, j);
+            ctx.lineTo(canvas.width, j);
+            ctx.stroke();
+        }
+
+        if (this.state === 'TITLE') {
+            ctx.fillStyle = '#00ffcc';
+            ctx.font = 'bold 36px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('SYSTEM BREACH', canvas.width/2, 220);
+
+            ctx.fillStyle = '#ff3366';
+            ctx.font = 'bold 24px Courier New';
+            ctx.fillText("THE ASH QUEEN'S FORGE", canvas.width/2, 270);
+
+            ctx.fillStyle = '#8a99ad';
+            ctx.font = '14px Courier New';
+            ctx.fillText('SLICK JACKET — WEIRD BY DESIGN', canvas.width/2, 320);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Courier New';
+            ctx.fillText('PRESS [ENTER] OR TAP TO INITIATE BREACH', canvas.width/2, 460);
+
+            ctx.fillStyle = '#00ffcc';
+            ctx.font = '12px Courier New';
+            ctx.fillText('CONTROLS: A/D or Arrows to Move | W/Space to Jump | Shift to Dash | X or J to Attack', canvas.width/2, 540);
+            return;
+        }
+
+        // Draw Platforms
+        for (let p of this.platforms) {
+            ctx.fillStyle = '#1a1c29';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#00ffcc';
+            ctx.fillRect(p.x, p.y, p.w, 2);
+        }
+
+        // Draw Projectiles
+        for (let pr of this.projectiles) {
+            ctx.fillStyle = pr.color;
+            ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
+        }
+
+        // Draw Entities
+        this.player.draw();
+        this.boss.draw();
+        particles.draw();
+
+        if (this.state === 'GAMEOVER' || this.state === 'VICTORY') {
+            ctx.fillStyle = 'rgba(5, 5, 8, 0.85)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = this.state === 'VICTORY' ? '#00ffcc' : '#ff3366';
+            ctx.font = 'bold 40px Courier New';
+            ctx.fillText(this.state === 'VICTORY' ? 'SYSTEM BREACH SUCCESSFUL' : 'CRITICAL SYSTEM FAILURE', canvas.width/2, canvas.height/2 - 40);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Courier New';
+            ctx.fillText('PRESS [ENTER] TO REBOOT', canvas.width/2, canvas.height/2 + 20);
+        }
+    }
+}
+
+const game = new Game();
+
+// Input triggers for state changes
+window.addEventListener('keydown', e => {
+    if (e.code === 'Enter') {
+        if (game.state === 'TITLE' || game.state === 'GAMEOVER' || game.state === 'VICTORY') {
+            game.start();
+        }
+    }
+});
+
+canvas.addEventListener('click', () => {
+    if (game.state === 'TITLE' || game.state === 'GAMEOVER' || game.state === 'VICTORY') {
+        game.start();
+    }
+});
+
+// Main Game Loop
+function mainLoop() {
+    game.update();
+    game.draw();
+    requestAnimationFrame(mainLoop);
+}
+
+requestAnimationFrame(mainLoop);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Ash Queen's Forge",
+      "hasCanvas": true,
+      "bodyTextLen": 413,
+      "bodyTextHash": "c6a933686457b3b40e3350dbedb0abcb01e52cf2302d04fa2581b006409f19f9",
+      "bodyTextPrefix": "SLICK JACKET SLICK JACKET — WEIRD BY DESIGN SYSTEM BREACH THE AS",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Ash Queen's Forge",
+      "hasCanvas": true,
+      "bodyTextLen": 413,
+      "bodyTextHash": "c6a933686457b3b40e3350dbedb0abcb01e52cf2302d04fa2581b006409f19f9",
+      "bodyTextPrefix": "SLICK JACKET SLICK JACKET — WEIRD BY DESIGN SYSTEM BREACH THE AS",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

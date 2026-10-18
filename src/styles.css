@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #050508;
+  --color-surface: #12141c;
+  --color-fg: #e7fff8;
+  --color-muted: #8a99ad;
+  --color-cyan: #00ffcc;
+  --color-ember: #ff9900;
+  --color-ash: #ff3366;
+  --color-steel: #1a1c29;
+  --color-line: #2c3348;
+  --font-display: "Chakra Petch", sans-serif;
+  --font-mono: "Share Tech Mono", ui-monospace, monospace;
+  --radius: 0.15rem;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-mono);
+    line-height: 1.45;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.85rem 1rem 1rem;
+}
+
+.hud button,
+.overlay,
+.overlay button {
+  pointer-events: auto;
+}
+
+.bar {
+  height: 0.55rem;
+  width: 7.5rem;
+  border: 1px solid var(--color-cyan);
+  background: color-mix(in srgb, var(--color-steel) 88%, transparent);
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--color-cyan);
+}
+
+.bar.ember {
+  border-color: var(--color-ember);
+}
+
+.bar.ember > span {
+  background: var(--color-ember);
+}
+
+.bar.ash {
+  height: 0.7rem;
+  border-color: var(--color-ash);
+}
+
+.bar.ash > span {
+  background: var(--color-ash);
+}
+
+.bar.ready > span {
+  background: var(--color-cyan);
+  box-shadow: 0 0 12px var(--color-cyan);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: color-mix(in srgb, var(--color-bg) 78%, transparent);
+}
+
+.panel {
+  width: min(40rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: center;
+  text-align: center;
+}
+
+.btn {
+  font-family: var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-cyan);
+  color: var(--color-cyan);
+  background: color-mix(in srgb, var(--color-cyan) 12%, transparent);
+  padding: 0.7rem 1.15rem;
+  min-height: 2.75rem;
+  border-radius: var(--radius);
+}
+
+.btn:hover {
+  background: color-mix(in srgb, var(--color-cyan) 28%, transparent);
+}
+
+.btn.ash {
+  border-color: var(--color-ash);
+  color: var(--color-ash);
+  background: color-mix(in srgb, var(--color-ash) 10%, transparent);
+}
+
+.btn.ghost {
+  border-color: var(--color-line);
+  color: var(--color-muted);
+  background: transparent;
+}
+
+.dock {
+  display: none;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--color-bg) 92%, black);
+  border-top: 1px solid var(--color-line);
+}
+
+.dock-group {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.touch {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 999px;
+  border: 2px solid var(--color-cyan);
+  color: var(--color-cyan);
+  background: color-mix(in srgb, var(--color-steel) 80%, transparent);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.touch:active {
+  background: color-mix(in srgb, var(--color-cyan) 42%, transparent);
+}
+
+.touch.ash {
+  border-color: var(--color-ash);
+  color: var(--color-ash);
+}
+
+.touch.ember {
+  border-color: var(--color-ember);
+  color: var(--color-ember);
+}
+
+.touch.ember.is-ready {
+  background: color-mix(in srgb, var(--color-ember) 35%, transparent);
+}
+
+@media (pointer: coarse), (max-width: 820px) {
+  .dock.is-on {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar.ready > span {
+    box-shadow: none;
+  }
+}
